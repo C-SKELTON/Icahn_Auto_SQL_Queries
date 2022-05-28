@@ -1,0 +1,30 @@
+select
+dc_inv.site
+,dc_inv.site_name
+,dc_inv.article_number
+,z.part_nbr
+,z.part_desc
+,dc_inv.line_code
+,dc_inv.on_hand
+,dc_inv.on_order
+,z.d4_cost
+,c.lcc_code
+,rnk.max_grade as corp_velo
+,z.indicator
+from udbprod.quebit_ap_dc_inventory dc_inv
+join udbprod.quebit_ap_part_master z on z.article_number = dc_inv.article_number
+left join udbprod.Reg_Assort_AP_Sku_Rank rnk on rnk.article_number = dc_inv.article_number
+left join
+(
+    select a.site, a.article_number, b.lcc_code from
+
+(select site, article_number, max(week_code) as wk from udbprod.quebit_ap_lcc
+where site in('8017','8018','8027','8033','8037','8043','8047','8048','8049','8052','8054','8056','8059','8060','8067','8068','8070','8071','8074','8076','8077','8078','38')
+group by site, article_number)a
+join
+(select site, article_number, lcc_code, week_code from udbprod.quebit_ap_lcc
+where site in('8017','8018','8027','8033','8037','8043','8047','8048','8049','8052','8054','8056','8059','8060','8067','8068','8070','8071','8074','8076','8077','8078','38'))b on b.site = a.site and b.article_number = a.article_number and b.week_code = a.wk)c on trim(c.site) = trim(dc_inv.site) and trim(c.article_number) = trim(dc_inv.article_number)
+where dc_inv.line_code = 'BAF'
+and dc_inv.week_code = (select max(week_code) from udbprod.quebit_ap_dc_inventory)
+and (on_hand > 0 and on_order = 0)
+order by 1 desc
